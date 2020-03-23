@@ -1,0 +1,48 @@
+version: '2.4'
+
+services:
+  ecapp:
+    build:
+      context: .
+    image: ecapp
+    environment:
+      ECDB_HOST: 'ecdb'
+      REPLY_URL: engage-local-${AGENT_ID}.pwcinternal.com
+    ports:
+      - "54000:54000"
+  ecdb:
+    image: "dkrcrgxussandbox.azurecr.io/ecdb"
+    environment:
+      ACCEPT_EULA: 'Y'
+      DATA_PATH: c:/data
+      sa_password: 'pass@word1'
+
+  ectests:
+    image: dkrcrgxussandbox.azurecr.io/vstest
+    environment:
+      ECDB_HOST: 'ecdb'
+      TEST_DLL: PwC.US.EC.Tests.dll
+    volumes:
+      - "./tests:c:\\tests"
+
+  ecautomation:
+    image: dkrcrgxussandbox.azurecr.io/vstest
+    environment:
+      #ECDB_HOST: 'ecdb'
+      ECAPP_Host: 'ecapp'
+      TEST_DLL: PwC.US.EC.Selenium.dll
+    volumes:
+       - "./tests:c:\\tests"
+
+  updatedb:     
+    image: dkrcrgxussandbox.azurecr.io/sqlpackage
+
+    volumes:
+      - "../PwC.US.EC.Database/bin/Release:c:\\dacpac"
+    command:  /Action:Publish /SourceFile:.\\dacpac\\PwC.US.EC.Database.dacpac /TargetConnectionString:"data source=ecdb;initial catalog=EngagementCenterDb;User Id=sa;password=pass@word1;encrypt=true;TrustServerCertificate=true;MultipleActiveResultSets=True; application name=EntityFramework" /p:ExcludeObjectType=Logins
+
+
+networks:
+ default:
+   external:
+     name: AgentNat_${AGENT_ID}
